@@ -9,17 +9,42 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
-const schema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  displayName: z
-    .string()
-    .min(3, { message: "Display name must be at least 3 characters" })
-    .max(30, { message: "Display name must be at most 30 characters" }),
-  password: z
-    .string()
-    .min(6, { message: "Password must be at least 6 characters" }),
-});
+const schema = z
+  .object({
+    email: z.string().email({ message: "Invalid email address" }),
+    displayName: z
+      .string()
+      .min(3, { message: "Display name must be at least 3 characters" })
+      .max(30, { message: "Display name must be at most 30 characters" }),
+    password: z
+      .string()
+      .min(6, { message: "Password must be at least 6 characters" })
+      .refine(
+        (value) =>
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
+            value
+          ),
+        {
+          message:
+            "Password must include an uppercase letter, a lowercase letter, a number, and a special character",
+        }
+      ),
+    confirmPassword: z.string().min(6, { message: "Confirm password must be at least 6 characters" }),
+    number: z
+      .string()
+      .min(10, { message: "Mobile number must be at least 10 digits" })
+      .max(15, { message: "Mobile number must not exceed 15 digits" })
+      .refine((value) => /^\d+$/.test(value), {
+        message: "Mobile number must contain only digits",
+      }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 const Register = () => {
   const {
@@ -31,6 +56,9 @@ const Register = () => {
   } = useForm({
     resolver: zodResolver(schema),
   });
+
+
+  const [viewPassword, setViewPassword] = useState<boolean>(false);
   const containerStyle = {
     height: "100%",
     display: "flex",
@@ -48,7 +76,15 @@ const Register = () => {
       console.error("Error creating user:", error);
     }
   };
+
   const router = useRouter();
+
+
+
+  const togglePasswordVisibility = () => {
+    setViewPassword((prevViewPassword) => !prevViewPassword);
+  };
+
   return (
     <div style={containerStyle}>
       <div className="justify-center items-center hidden min-[484px]:flex">
@@ -97,6 +133,25 @@ const Register = () => {
                     </p>
                   )}
                 </div>
+
+                <div className="mail space-y-2 my-3">
+                  <label className="font-bold text-xs text-[11px]">
+                    Mobile Number
+                  </label>
+                  <input
+                    {...register("number")}
+                    className="w-full h-10 rounded-sm bg-[#1e1f22] pl-2"
+                    type="text"
+                  />
+                  {errors.number && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {Array.isArray(errors.number.message)
+                        ? errors.number.message[0]
+                        : errors.number.message || "Validation error"}
+                    </p>
+                  )}
+                </div>
+
                 <div className="mail space-y-2 my-3">
                   <label className="font-bold text-xs text-[11px]">
                     PASSWORD *
@@ -104,8 +159,19 @@ const Register = () => {
                   <input
                     {...register("password")}
                     className="w-full h-10 rounded-sm bg-[#1e1f22] pl-2"
-                    type="password"
+                    type={viewPassword ? "text" : "password"}
                   />
+                   {!viewPassword ? (
+                      <Eye
+                        className="absolute right-2 top-2 cursor-pointer"
+                        onClick={togglePasswordVisibility}
+                      />
+                    ) : (
+                      <EyeOff
+                        className="absolute right-2 top-2 cursor-pointer"
+                        onClick={togglePasswordVisibility}
+                      />
+                    )}
                   {errors.password && (
                     <p className="text-red-500 text-xs mt-1">
                       {Array.isArray(errors.password.message)
@@ -114,6 +180,25 @@ const Register = () => {
                     </p>
                   )}
                 </div>
+
+                <div className="mail space-y-2 my-3">
+                  <label className="font-bold text-xs text-[11px]">
+                    CONFIRM PASSWORD *
+                  </label>
+                  <input
+                    {...register("confirmPassword")}
+                    className="w-full h-10 rounded-sm bg-[#1e1f22] pl-2"
+                    type="password"
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {Array.isArray(errors.confirmPassword.message)
+                        ? errors.confirmPassword.message[0]
+                        : errors.confirmPassword.message || "Validation error"}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   className="h-11 w-full rounded-sm bg-[#5865f2] my-2 hover:bg-[#434ece] text-white font-semibold"

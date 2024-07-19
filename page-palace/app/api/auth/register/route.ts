@@ -15,6 +15,13 @@ const schema = z.object({
     password: z
         .string()
         .min(6, { message: "Password must be at least 6 characters" }),
+        number: z
+        .string()
+        .min(10, { message: "Mobile number must be at least 10 digits" })
+        .max(15, { message: "Mobile number must not exceed 15 digits" })
+        .refine(value => /^\d+$/.test(value), {
+          message: "Mobile number must contain only digits"
+        }),
 });
 
 const client = new Client({
@@ -29,15 +36,15 @@ export async function POST(req: Request) {
     try {
         await client.connect();
         const data = await req.json();
-        const { email, displayName, password } = schema.parse(data);
+        const { email, displayName, password,number } = schema.parse(data);
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const query = `
-            INSERT INTO users (email, display_name, password)
-            VALUES ($1, $2, $3)
+            INSERT INTO users (email, display_name, password,mobile_number)
+            VALUES ($1, $2, $3,$4)
             RETURNING *;
         `;
-        const values = [email, displayName, hashedPassword];
+        const values = [email, displayName, hashedPassword,number];
 
         const res = await client.query(query, values);
         await client.end();
