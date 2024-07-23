@@ -13,8 +13,8 @@ export default async function Home() {
     console.error("Error fetching books:", error);
   }
 
-  const profile = await presentProfile();
-  console.log("Profile:", profile); // Logging profile object
+   const profile = await presentProfile();
+   console.log("Profile:", profile); // Logging profile object
 
   return (
     <div>
