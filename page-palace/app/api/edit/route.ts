@@ -1,55 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { NextResponse } from "next/server";
+import { Client } from "pg";
+import dotenv from "dotenv";
+import { presentProfile } from "@/lib/profile";
 
+dotenv.config();
 
-const uploadDir = path.join(process.cwd(), 'public/uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
+const client = new Client({
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB,
+    password: process.env.DB_PASSWD,
+    port: 5432
 });
 
-const upload = multer({ storage: storage });
+export async function PATCH(req: Request) {
+    try {
+        await client.connect();
+        const data = await req.json();
+        const { email, name, number } = data;
+        const { id } = await presentProfile();
+        if (!id || !email || !name || !number) {
+            return new NextResponse("Missing fields", { status: 400 });
+        }
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable the default body parser to handle file uploads
-  },
-};
+        const query = `
+            UPDATE users
+            SET email = $1, display_name = $2, mobile_number = $3
+            WHERE id = $4
+            RETURNING *;
+        `;
+        const values = [email, name, number, id];
 
-export async function POST(req: NextRequest) {
-  return new Promise((resolve, reject) => {
-    upload.single('profileImage')(req as any, {} as any, async (err: any) => {
-      if (err) {
-        console.error(`Error uploading file: ${err.message}`);
-        return resolve(new NextResponse(JSON.stringify({ error: `Error uploading file: ${err.message}` }), { status: 500 }));
-      }
+        const res = await client.query(query, values);
+        await client.end();
 
-      // Access parsed body from request
-      const formData = new URLSearchParams(await req.text());
-      const name = formData.get('name') || '';
-      const email = formData.get('email') || '';
-      const profileImage = (req as any).file;
-
-      if (profileImage) {
-        const profileImagePath = `/uploads/${profileImage.filename}`;
-        console.log('Name:', name);
-        console.log('Email:', email);
-        console.log('Profile Image Path:', profileImagePath);
-
-        return resolve(new NextResponse(JSON.stringify({ message: 'Profile updated successfully!', profileImagePath }), { status: 200 }));
-      } else {
-        return resolve(new NextResponse(JSON.stringify({ error: 'No file uploaded.' }), { status: 400 }));
-      }
-    });
-  });
+        const updatedUser = res.rows[0];
+        return NextResponse.json(updatedUser);
+    } catch (error) {
+        console.error("Error updating user:", error);
+        await client.end();
+        return new NextResponse("Internal Error", { status: 500 });
+    }
 }

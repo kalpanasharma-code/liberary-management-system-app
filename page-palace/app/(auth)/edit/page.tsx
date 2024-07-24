@@ -1,82 +1,62 @@
 "use client";
-import React, { useState } from 'react';
+
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+
+type FormData = {
+  name: string;
+  email: string;
+  number: string;
+};
 
 const EditProfile = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [profileImage, setProfileImage] = useState<File | null>(null);
+    const router = useRouter();
+  const { handleSubmit, control, register, setValue, watch } =
+    useForm<FormData>();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProfileImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('email', email);
-    if (profileImage) {
-      formData.append('profileImage', profileImage);
-    }
-
-    const response = await fetch('/api/edit', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (response.ok) {
-      alert('Profile updated successfully!');
-    } else {
-      alert('Failed to update profile.');
-    }
+  const onSubmit = async (data: FormData) => {
+    try {
+        await axios.patch("/api/edit", data);
+        router.push("/");
+      } catch (error) {
+        console.error("Error creating user:", error);
+      }
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
-      <form onSubmit={handleSubmit}>
+
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mb-4">
           <label className="block text-gray-700">Name</label>
           <input
             type="text"
-            className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
+            {...register("name", { required: true })}
+            className="w-full text-black px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
+
         <div className="mb-4">
           <label className="block text-gray-700">Email</label>
           <input
             type="email"
-            className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            {...register("email", { required: true })}
+            className="w-full px-4 text-black py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700">Profile Image</label>
+          <label className="block text-gray-700">Number</label>
           <input
-            type="file"
-            accept="image/*"
-            className="w-full mt-2"
-            onChange={handleImageChange}
+            type="number"
+            {...register("number", { required: true })}
+            className="w-full px-4 text-black py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="Profile Preview"
-              className="mt-4 w-32 h-32 rounded-full object-cover"
-            />
-          )}
         </div>
+
         <button
           type="submit"
           className="w-full px-4 py-2 mt-4 text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600"
